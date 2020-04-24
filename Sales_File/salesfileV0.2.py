@@ -206,7 +206,7 @@ sales_df.Begin_Date = sales_df['Begin_Date'].dt.strftime('%m/%d/%y')
 
 sales_df.Approve_Date = sales_df['Approve_Date'].dt.strftime('%m/%d/%y')
 
-sales_df.Bustout_Date = sales_df['Approve_Date'].dt.strftime('%m/%d/%y')
+sales_df.Bustout_Date = sales_df['Bustout_Date'].dt.strftime('%m/%d/%y')
 
 #adding 1 #human indexing
 sales_df.index = range(1, len(sales_df)+1) 
