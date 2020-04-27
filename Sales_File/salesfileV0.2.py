@@ -5,8 +5,16 @@ import random
 import pandas as pd
 import datetime as dt
 import math
+import warnings
+
+warnings.simplefilter(action='ignore')
+
 
 line_check = re.compile(r'\s\d{4}\s') #the pattern to deterimine if a line should be imported
+
+line_check1 = re.compile(r'\d{9}') #pattern to add a project name to the dict
+
+name_dict = {}
 
 while True:
     filename = input('Please enter text sales file name (or path if in different folder) or "A" to abort: ')
@@ -20,7 +28,10 @@ while True:
             lines1 = [] 
             for line in f:
                 if (line_check.search(line[10:16])) != None and (switch == 0): #imports sales file lines
-                    lines.append(line.rstrip('\n'))  
+                    lines.append(line.rstrip('\n'))
+
+                elif (line_check1.search(line[4:13])) != None and (switch == 0): #import project name dictionary
+                    name_dict[line[4:13]] = line[15:40].strip()
 
                 elif 'Sales   Transfer' in line: switch = 1 #flips the switch to import transfers
 
@@ -30,10 +41,9 @@ while True:
             break                  
 
     except: print('Invalid name; copy or type the whole path or put the text file in the same file as the working directory (program file)')
-    
 
 #SALES FILE (NOT TRANSFERS)
-column_list = ['Project_Number', 'BUID', 'Business_Unit', 'Plat_Phs/Blk/Lot', 'Buyer_Name',
+column_list = ['Project_Number', 'Project_Name', 'BUID', 'Business_Unit', 'Plat_Phs/Blk/Lot', 'Buyer_Name',
                'Begin_Date', 'Begin_Amount', 'Approve_Date', 'Approve_Amount',
                'Bustout_Date', 'Bustout_Amount', 'Close_Date', 'Close_Amount']
 
@@ -78,10 +88,13 @@ for i in range(len(lines)):
 
     close_amount.append(lines[i][157:169].strip()) #extract the close date
 
+#creating project name using map
+project_name = [name_dict[i] for i in project_number]
+
 #defining business unit list
 business_unit = [(int(project_number[i]) + int(buid[i])) for i in range(len(buid))]
             
-list_data = [project_number, buid, business_unit, plat, buyer_name, begin_date, begin_amount, approve_date,
+list_data = [project_number, project_name, buid, business_unit, plat, buyer_name, begin_date, begin_amount, approve_date,
         approve_amount, bustout_date, bustout_amount, close_date, close_amount]
 
 #taking data to DF for more modifications
@@ -89,7 +102,7 @@ sales_df = pd.DataFrame(list_data).transpose()
 sales_df.columns = column_list
 
 #TRANSFERS
-column_list1 = ['Project_Number', 'BUID', 'Business_Unit', 'Plat_Phs/Blk/Lot', 'Buyer_Name',
+column_list1 = ['Project_Number', 'Project_Name', 'BUID', 'Business_Unit', 'Plat_Phs/Blk/Lot', 'Buyer_Name',
                'To_BUID', 'To_Plat_Phs/Blk/Lot', 'Sales_Date', 'Transfer_Date']
 
 project_number1 = [] #initializing empty lists to append to later
@@ -118,9 +131,11 @@ for i in range(len(lines1)):
 
     transfer_date1.append(lines1[i][103:112].strip()) #extra the transfer date
 
+project_name1 = [name_dict[i] for i in project_number1]
+
 business_unit1 = [(int(project_number1[i]) + int(buid1[i])) for i in range(len(buid1))]
 
-list_data1 = [project_number1, buid1, business_unit1, plat1, buyer_name1, to_buid1, to_plat1, sales_date1, transfer_date1]
+list_data1 = [project_number1, project_name1, buid1, business_unit1, plat1, buyer_name1, to_buid1, to_plat1, sales_date1, transfer_date1]
 
 transfer_df = pd.DataFrame(list_data1).transpose()
 transfer_df.columns = column_list1
@@ -158,6 +173,11 @@ while True:
         sales_sample_index = random.sample(list(sales_df.loc[sales_df.Close_Date != ""].loc[sales_df[["Begin_Date", "Approve_Date"]].max(axis=1, skipna = True) >= pd.to_datetime(date)].index), int(pop_count))
     
         sales_sample_df = sales_df.iloc[sales_sample_index, :]
+
+        sales_sample_df.Begin_Date = sales_sample_df['Begin_Date'].dt.strftime('%m/%d/%y')
+
+        sales_sample_df.Approve_Date = sales_sample_df['Approve_Date'].dt.strftime('%m/%d/%y')
+
     except:                 
         print('Please enter an integer between 0 and 40.')
         continue
@@ -195,7 +215,16 @@ while True:
         
         cancel_sample_index = random.sample(list(sales_df[sales_df.Contract_Cancel_Days >= 30].index), int(cancel_count))
 
-        cancel_sample_df = sales_df.iloc[cancel_sample_index, :]                     
+        cancel_sample_df = sales_df.iloc[cancel_sample_index, :]
+
+        #appearances of DT columns
+
+        cancel_sample_df.Begin_Date = cancel_sample_df['Begin_Date'].dt.strftime('%m/%d/%y')
+
+        cancel_sample_df.Approve_Date = cancel_sample_df['Approve_Date'].dt.strftime('%m/%d/%y')
+
+        cancel_sample_df.Bustout_Date = cancel_sample_df['Bustout_Date'].dt.strftime('%m/%d/%y')
+
     except:
         print('Please enter an integer between 0 and 40.')
         continue
