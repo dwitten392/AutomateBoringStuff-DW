@@ -45,7 +45,7 @@ while True:
 #SALES FILE (NOT TRANSFERS)
 column_list = ['Project_Number', 'Project_Name', 'BUID', 'Business_Unit', 'Plat_Phs/Blk/Lot', 'Buyer_Name',
                'Begin_Date', 'Begin_Amount', 'Approve_Date', 'Approve_Amount',
-               'Bustout_Date', 'Bustout_Amount', 'Close_Date', 'Close_Amount']
+               'Bustout_Date', 'Bustout_Amount', 'Close_Date', 'Close_Amount', 'Unique_ID']
 
 project_number = [] #initializing empty lists to append to later
 buid = []
@@ -88,14 +88,17 @@ for i in range(len(lines)):
 
     close_amount.append(lines[i][157:169].strip()) #extract the close date
 
-#creating project name using map
+#creating project name using the dictionary
 project_name = [name_dict[i] for i in project_number]
 
 #defining business unit list
 business_unit = [(int(project_number[i]) + int(buid[i])) for i in range(len(buid))]
+
+#create unique ID
+unique_id = [buyer_name[i] + str(business_unit[i]) for i in range(len(business_unit))]
             
 list_data = [project_number, project_name, buid, business_unit, plat, buyer_name, begin_date, begin_amount, approve_date,
-        approve_amount, bustout_date, bustout_amount, close_date, close_amount]
+        approve_amount, bustout_date, bustout_amount, close_date, close_amount, unique_id]
 
 #taking data to DF for more modifications
 sales_df = pd.DataFrame(list_data).transpose()
@@ -174,14 +177,17 @@ while True:
     
         sales_sample_df = sales_df.iloc[sales_sample_index, :]
 
-        sales_sample_df.Begin_Date = sales_sample_df['Begin_Date'].dt.strftime('%m/%d/%y')
+        sales_sample_df.Begin_Date = sales_sample_df['Begin_Date'].dt.strftime('%m/%d/%Y')
 
-        sales_sample_df.Approve_Date = sales_sample_df['Approve_Date'].dt.strftime('%m/%d/%y')
+        sales_sample_df.Approve_Date = sales_sample_df['Approve_Date'].dt.strftime('%m/%d/%Y')
 
     except:                 
         print('Please enter an integer between 0 and 40.')
         continue
     break
+
+#sorting DF
+sales_df = sales_df.sort_values(['Business_Unit', 'Begin_Date', 'Approve_Date'], ascending = (True, False, True))
 
 #building out cancellation days list for DataFrame (probably a better way to do this)
 cancellation_days = []
@@ -202,6 +208,14 @@ for i in range(len(sales_df)):
 
 sales_df["Contract_Cancel_Days"] = cancellation_days
 
+#building out New Contract Days
+
+sales_df["New_Contract_Days"] = ""
+
+for i in range(len(sales_df.BUID)-1):
+    if sales_df.Business_Unit.iloc[i] == sales_df.Business_Unit.iloc[i+1]:
+        sales_df["New_Contract_Days"].iloc[i] = (sales_df["Approve_Date"].iloc[i+1] - sales_df["Bustout_Date"].iloc[i]).days
+
 #telling the user the cancelation population number and gathering the number of samples
 while True:
 
@@ -219,11 +233,11 @@ while True:
 
         #appearances of DT columns
 
-        cancel_sample_df.Begin_Date = cancel_sample_df['Begin_Date'].dt.strftime('%m/%d/%y')
+        cancel_sample_df.Begin_Date = cancel_sample_df['Begin_Date'].dt.strftime('%m/%d/%Y')
 
-        cancel_sample_df.Approve_Date = cancel_sample_df['Approve_Date'].dt.strftime('%m/%d/%y')
+        cancel_sample_df.Approve_Date = cancel_sample_df['Approve_Date'].dt.strftime('%m/%d/%Y')
 
-        cancel_sample_df.Bustout_Date = cancel_sample_df['Bustout_Date'].dt.strftime('%m/%d/%y')
+        cancel_sample_df.Bustout_Date = cancel_sample_df['Bustout_Date'].dt.strftime('%m/%d/%Y')
 
     except:
         print('Please enter an integer between 0 and 40.')
@@ -231,11 +245,11 @@ while True:
     break
 
 #appearance of datetime columns
-sales_df.Begin_Date = sales_df['Begin_Date'].dt.strftime('%m/%d/%y')
+sales_df.Begin_Date = sales_df['Begin_Date'].dt.strftime('%m/%d/%Y')
 
-sales_df.Approve_Date = sales_df['Approve_Date'].dt.strftime('%m/%d/%y')
+sales_df.Approve_Date = sales_df['Approve_Date'].dt.strftime('%m/%d/%Y')
 
-sales_df.Bustout_Date = sales_df['Bustout_Date'].dt.strftime('%m/%d/%y')
+sales_df.Bustout_Date = sales_df['Bustout_Date'].dt.strftime('%m/%d/%Y')
 
 #adding 1 #human indexing
 sales_df.index = range(1, len(sales_df)+1) 
