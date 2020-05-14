@@ -62,7 +62,7 @@ close_amount = []
 
 for i in range(len(lines)):
     if '  ' in lines[i][1:3]: # this part is to extract the project number
-        project_number.append(project_number[i-1]) #if the project number isn't listed, take from the previous pn
+        project_number.append(project_number[i-1]) #if the project number isn't listed, take from the previous
     else:
         project_number.append(lines[i][1:10]) #extract the project number
 
@@ -143,12 +143,18 @@ list_data1 = [project_number1, project_name1, buid1, business_unit1, plat1, buye
 transfer_df = pd.DataFrame(list_data1).transpose()
 transfer_df.columns = column_list1
 
-#converting close date to datetime column
+#converting to datetime columns
 sales_df.Begin_Date = pd.to_datetime(sales_df.Begin_Date, format = '%m/%d/%y', errors = 'coerce')
 
 sales_df.Approve_Date = pd.to_datetime(sales_df.Approve_Date, format = '%m/%d/%y', errors = 'coerce')
 
 sales_df.Bustout_Date = pd.to_datetime(sales_df.Bustout_Date, format = '%m/%d/%y', errors = 'coerce')
+
+for i in range(len(sales_df.Close_Date)):
+    if sales_df.Close_Date.iloc[i] == "":
+        pass
+    else:
+        sales_df.Close_Date.iloc[i] = pd.to_datetime(sales_df.Close_Date.iloc[i]).strftime('%m/%d/%Y')
 
 #Getting cutoff date from user
 while True:
@@ -216,6 +222,28 @@ for i in range(len(sales_df.BUID)-1):
     if sales_df.Business_Unit.iloc[i] == sales_df.Business_Unit.iloc[i+1]:
         sales_df["New_Contract_Days"].iloc[i] = (sales_df["Approve_Date"].iloc[i+1] - sales_df["Bustout_Date"].iloc[i]).days
 
+#building out Subsequent Buyer
+
+sales_df["Sub_Buyer"] = ""
+
+for i in range(len(sales_df.BUID)-1):
+    if sales_df.New_Contract_Days.iloc[i] == "":
+        pass
+    else:
+        if sales_df.New_Contract_Days.iloc[i] <= 5: 
+            sales_df["Sub_Buyer"].iloc[i] = sales_df['Buyer_Name'].iloc[i+1]
+
+#building out Subsequent Approve Date
+
+sales_df["Sub_Approve_Date"] = ""
+
+for i in range(len(sales_df.BUID)-1):
+    if sales_df.New_Contract_Days.iloc[i] == "":
+        pass
+    else:
+        if sales_df.New_Contract_Days.iloc[i] <= 5: 
+            sales_df["Sub_Approve_Date"].iloc[i] = sales_df['Approve_Date'].iloc[i+1]
+
 #telling the user the cancelation population number and gathering the number of samples
 while True:
 
@@ -239,6 +267,12 @@ while True:
 
         cancel_sample_df.Bustout_Date = cancel_sample_df['Bustout_Date'].dt.strftime('%m/%d/%Y')
 
+        for i in range(len(cancel_sample_df.Sub_Approve_Date)):
+            if cancel_sample_df.Sub_Approve_Date.iloc[i] == "":
+                pass
+            else:
+                cancel_sample_df.Sub_Approve_Date.iloc[i] = cancel_sample_df['Sub_Approve_Date'].iloc[i].strftime('%m/%d/%Y')
+
     except:
         print('Please enter an integer between 0 and 40.')
         continue
@@ -250,6 +284,12 @@ sales_df.Begin_Date = sales_df['Begin_Date'].dt.strftime('%m/%d/%Y')
 sales_df.Approve_Date = sales_df['Approve_Date'].dt.strftime('%m/%d/%Y')
 
 sales_df.Bustout_Date = sales_df['Bustout_Date'].dt.strftime('%m/%d/%Y')
+
+for i in range(len(sales_df.Sub_Approve_Date)):
+    if sales_df.Sub_Approve_Date.iloc[i] == "":
+        pass
+    else:
+        sales_df.Sub_Approve_Date.iloc[i] = sales_df['Sub_Approve_Date'].iloc[i].strftime('%m/%d/%Y')
 
 #adding 1 #human indexing
 sales_df.index = range(1, len(sales_df)+1) 
